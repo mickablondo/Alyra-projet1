@@ -67,6 +67,7 @@ contract Voting is Ownable {
 
     /**
      * @notice L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
+     * @param _address l'adresse ethereum de l'électeur à ajouter
      */
     function registerVoter(address _address) external onlyOwner {
         require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !"); // TODO MODIFIER avec startProposalsRegistration ???????????
@@ -141,6 +142,8 @@ contract Voting is Ownable {
 
     /**
      * @notice Chaque électeur peut prendre connaissance d'une proposition.
+     * @param _id identifiant de la proposition
+     * @return proposal la description de la proposition
      */
     function getProposal(uint _id) external view onlyVoters notEmptyProposals returns (string memory) {
         return proposals[_id];
@@ -148,6 +151,7 @@ contract Voting is Ownable {
 
     /**
      * @notice Tout le monde peut vérifier les derniers détails de la proposition gagnante.
+     * @return proposal la description de la proposition gagnante
      */
     function getWinnerProposal() external view notEmptyProposals returns (string memory) {
         require(workflowStatus == WorkflowStatus.VotesTallied, "Please, wait the end of the tally.");
