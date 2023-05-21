@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.19; // TODO A CHANGER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+pragma solidity 0.8.20;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 
 /**
  * @title Projet 1 - formation Alyra - Contrat de vote pour une petite organisation.
  * @dev Gestion d'un système de vote dont les électeurs peuvent réaliser des propositions.
- * @author Mickael Blondeau
+ * @author Mickael Blondeau - Promotion Buterin 2023
  */
 contract Voting is Ownable {
     uint public winningProposalId;
@@ -17,7 +17,7 @@ contract Voting is Ownable {
         bool hasVoted;
         uint votedProposalId;
     }
-    mapping(address => Voter) private voters;
+    mapping(address => Voter) voters;
 
     // structure représentant une proposition
     struct Proposal {
@@ -34,8 +34,7 @@ contract Voting is Ownable {
         VotingSessionEnded,
         VotesTallied
     }
-    // valeur par défaut : RegisteringVoters
-    // visibilité publique pour connaître l'étape en cours
+
     WorkflowStatus public workflowStatus;
     Proposal[] proposals;
 
@@ -84,6 +83,8 @@ contract Voting is Ownable {
         emit WorkflowStatusChange(WorkflowStatus.RegisteringVoters, WorkflowStatus.ProposalsRegistrationStarted);
     }
 
+    // TODO : 1 seule méthode pour modifier le statut ? status++ ?
+
     /**
      * @notice L'administrateur de vote met fin à la session d'enregistrement des propositions.
      */
@@ -113,10 +114,12 @@ contract Voting is Ownable {
 
     /**
      * @notice L'administrateur du vote comptabilise les votes.
+     * @dev Il n'y a aucun sens à comptabiliser des votes si aucune proposition n'a été faite.
      */
-    function tallyVotes() external onlyOnwer {
+    function tallyVotes() external onlyOwner notEmptyProposals {
         require(workflowStatus == WorkflowStatus.VotingSessionEnded, "Wrong step to tally the votes !");
         // TODO !!!!!!!!!!!!!!!!!!!!!!!! La proposition qui obtient le plus de voix l'emporte.
+
         workflowStatus = WorkflowStatus.VotesTallied;
         emit WorkflowStatusChange(WorkflowStatus.VotingSessionEnded, WorkflowStatus.VotesTallied);
     }
@@ -135,13 +138,21 @@ contract Voting is Ownable {
 
     /**
      * @notice Chaque électeur peut voir les votes des autres. 
+     * @param _address l'adresse ethereum de l'électeur.
+     * @return proposalId l'id de la proposition votée par l'adresse.
      */
-    // TODO
+    function getVote(address _address) external view onlyVoters returns (uint) {
+        require(voters[_address].isRegistered, "This address can't vote.");
+        require(voters[_address].hasVoted, "This address didn't vote.");
+        require(workflowStatus >= WorkflowStatus.VotingSessionStarted, "Voting session has not started.");
+        return voters[_address].votedProposalId;
+    }
 
     // ---------- Actions sur les proposals ----------
 
     /**
      * @notice Chaque électeur peut prendre connaissance d'une proposition.
+     * @dev Le tableau de proposition ne doit pas être vide.
      * @param _id identifiant de la proposition
      * @return proposal la description de la proposition
      */
@@ -151,6 +162,7 @@ contract Voting is Ownable {
 
     /**
      * @notice Tout le monde peut vérifier les derniers détails de la proposition gagnante.
+     * @dev Le tableau de proposition ne doit pas être vide.
      * @return proposal la description de la proposition gagnante
      */
     function getWinnerProposal() external view notEmptyProposals returns (string memory) {
