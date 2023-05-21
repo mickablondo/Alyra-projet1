@@ -11,7 +11,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 contract Voting is Ownable {
     uint public winningProposalId;
 
-    // structure représentant un votant
+    // structure représentant un électeur
     struct Voter {
         bool isRegistered;
         bool hasVoted;
@@ -50,7 +50,7 @@ contract Voting is Ownable {
      * @dev La personne qui interroge doit être dans la whitelist ///////// TODO ou l'administrateur ???????????????????????
      */
     modifier onlyVoters() {
-        require(voters[msg.sender].isRegistered, "Caller is not a voter !");
+        require(voters[msg.sender].isRegistered, "Forbidden access, you're not a voter !");
         _;
     }
 
@@ -62,7 +62,16 @@ contract Voting is Ownable {
         _;
     }
 
-    // ---------- Action d'administration ----------
+    /**
+     * @dev On vérifie que la proposition existe
+     * @param _proposalId id de la proposition
+     */
+    modifier shouldIdProposalExists(uint _proposalId) {
+        require(_proposalId < proposals.length, "This proposal doesn't exist.");
+        _;
+    }
+
+    // ---------- Actions d'administration ----------
 
     /**
      * @notice L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
@@ -70,6 +79,7 @@ contract Voting is Ownable {
      */
     function registerVoter(address _address) external onlyOwner {
         require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !"); // TODO MODIFIER avec startProposalsRegistration ???????????
+        require(!voters[_address].isRegistered, "Already registered.");
         voters[_address].isRegistered = true;
         emit VoterRegistered(_address);
     }
@@ -78,7 +88,7 @@ contract Voting is Ownable {
      * @notice L'administrateur du vote commence la session d'enregistrement de la proposition.
      */
     function startProposalsRegistration() external onlyOwner {
-        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to start the registration of proposals !");
+        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to start the registration of proposals !");  // TODO MODIFIER avec registerVoter ???????????
         workflowStatus = WorkflowStatus.ProposalsRegistrationStarted;
         emit WorkflowStatusChange(WorkflowStatus.RegisteringVoters, WorkflowStatus.ProposalsRegistrationStarted);
     }
@@ -118,7 +128,14 @@ contract Voting is Ownable {
      */
     function tallyVotes() external onlyOwner notEmptyProposals {
         require(workflowStatus == WorkflowStatus.VotingSessionEnded, "Wrong step to tally the votes !");
-        // TODO !!!!!!!!!!!!!!!!!!!!!!!! La proposition qui obtient le plus de voix l'emporte.
+        uint _winnerId;
+
+        for(uint i=0; i<proposals.length; i++) {
+            if(proposals[i].voteCount > proposals[_winnerId].voteCount) {
+                _winnerId = i;
+            }
+        }
+        winningProposalId = _winnerId;
 
         workflowStatus = WorkflowStatus.VotesTallied;
         emit WorkflowStatusChange(WorkflowStatus.VotingSessionEnded, WorkflowStatus.VotesTallied);
@@ -127,17 +144,32 @@ contract Voting is Ownable {
     // ---------- Actions des électeurs ----------
 
     /**
-     * @notice Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que la session d'enregistrement est active. ==> vérif non vide !
+     * @notice Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que la session d'enregistrement est active.
+     * @param _description la description de la proposition
      */
-    // TODO
+    function addProposal(string calldata _description) external onlyVoters {
+        // TODO : vérif proposition existante ??
+        require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Proposals can't be sent now.");
+        require(bytes(_description).length>0, "Can't send empty proposal.");
+
+        proposals.push(_description);
+    }
 
     /**
      * @notice Les électeurs inscrits votent pour leur proposition préférée. ==> vérif : non supérieur à array.length
+     * @param _proposalId id de la proposition votée
      */
-    // TODO
+    function addVote(uint _proposalId) external onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) {
+        require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Votes can't be sent now.");
+
+        proposals[_proposalId].voteCount++;
+        voters[msg.sender].hasVoted = true;
+        voters[msg.sender].votedProposalId = _proposalId;
+    }
 
     /**
      * @notice Chaque électeur peut voir les votes des autres. 
+     * @dev L'adresse demandée doit être whitelistée, l'électeur doit avoir émis un vote et la session doit avoir été démarrée.
      * @param _address l'adresse ethereum de l'électeur.
      * @return proposalId l'id de la proposition votée par l'adresse.
      */
@@ -148,33 +180,25 @@ contract Voting is Ownable {
         return voters[_address].votedProposalId;
     }
 
-    // ---------- Actions sur les proposals ----------
+    // ---------- Getters sur les proposals ----------
 
     /**
      * @notice Chaque électeur peut prendre connaissance d'une proposition.
-     * @dev Le tableau de proposition ne doit pas être vide.
+     * @dev Le tableau de proposition ne doit pas être vide et l'id demandé doit exister.
      * @param _id identifiant de la proposition
-     * @return proposal la description de la proposition
+     * @return description la description de la proposition demandée
      */
-    function getProposal(uint _id) external view onlyVoters notEmptyProposals returns (string memory) {
-        return proposals[_id];
+    function getProposal(uint _proposalId) external view onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) returns (string memory) {
+        return proposals[_proposalId].description;
     }
 
     /**
      * @notice Tout le monde peut vérifier les derniers détails de la proposition gagnante.
-     * @dev Le tableau de proposition ne doit pas être vide.
-     * @return proposal la description de la proposition gagnante
+     * @dev Le tableau de proposition ne doit pas être vide et le comptage des votes doit être clos.
+     * @return description la description de la proposition gagnante
      */
     function getWinnerProposal() external view notEmptyProposals returns (string memory) {
         require(workflowStatus == WorkflowStatus.VotesTallied, "Please, wait the end of the tally.");
-        return proposals[winningProposalId];
+        return proposals[winningProposalId].description;
     }
-
-    /* // TODO à vérifier
-✔️ Le vote n'est pas secret pour les utilisateurs ajoutés à la Whitelist
-✔️ Chaque électeur peut voir les votes des autres
-✔️ Le gagnant est déterminé à la majorité simple
-✔️ La proposition qui obtient le plus de voix l'emporte.
-✔️ N'oubliez pas que votre code doit inspirer la confiance et faire en sorte de respecter les ordres déterminés!
-    */
 }
