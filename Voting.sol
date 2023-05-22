@@ -152,7 +152,9 @@ contract Voting is Ownable {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Proposals can't be sent now.");
         require(bytes(_description).length>0, "Can't send empty proposal.");
 
-        proposals.push(_description);
+        Proposal memory proposal;
+        proposal.description = _description;
+        proposals.push(proposal);
     }
 
     /**
@@ -185,7 +187,7 @@ contract Voting is Ownable {
     /**
      * @notice Chaque électeur peut prendre connaissance d'une proposition.
      * @dev Le tableau de proposition ne doit pas être vide et l'id demandé doit exister.
-     * @param _id identifiant de la proposition
+     * @param _proposalId identifiant de la proposition
      * @return description la description de la proposition demandée
      */
     function getProposal(uint _proposalId) external view onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) returns (string memory) {
