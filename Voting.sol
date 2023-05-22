@@ -155,10 +155,11 @@ contract Voting is Ownable {
         Proposal memory proposal;
         proposal.description = _description;
         proposals.push(proposal);
+        emit ProposalRegistered(proposals.length-1);
     }
 
     /**
-     * @notice Les électeurs inscrits votent pour leur proposition préférée. ==> vérif : non supérieur à array.length
+     * @notice Les électeurs inscrits votent pour leur proposition préférée.
      * @param _proposalId id de la proposition votée
      */
     function addVote(uint _proposalId) external onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) {
@@ -167,6 +168,7 @@ contract Voting is Ownable {
         proposals[_proposalId].voteCount++;
         voters[msg.sender].hasVoted = true;
         voters[msg.sender].votedProposalId = _proposalId;
+        emit Voted(msg.sender, _proposalId);
     }
 
     /**
