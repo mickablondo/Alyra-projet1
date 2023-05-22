@@ -9,15 +9,12 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
  * @author Mickael Blondeau - Promotion Buterin 2023
  */
 contract Voting is Ownable {
-    uint public winningProposalId;
-
     // structure représentant un électeur
     struct Voter {
         bool isRegistered;
         bool hasVoted;
         uint votedProposalId;
     }
-    mapping(address => Voter) voters;
 
     // structure représentant une proposition
     struct Proposal {
@@ -35,7 +32,9 @@ contract Voting is Ownable {
         VotesTallied
     }
 
+    uint public winningProposalId;
     WorkflowStatus public workflowStatus;
+    mapping(address => Voter) voters;
     Proposal[] proposals;
 
     // déclaration des événements
@@ -47,7 +46,7 @@ contract Voting is Ownable {
     // ---------- Modifiers ----------
 
     /**
-     * @dev La personne qui interroge doit être dans la whitelist ///////// TODO ou l'administrateur ???????????????????????
+     * @dev La personne qui interroge doit être dans la whitelist
      */
     modifier onlyVoters() {
         require(voters[msg.sender].isRegistered, "Forbidden access, you're not a voter !");
@@ -58,7 +57,7 @@ contract Voting is Ownable {
      * @dev On vérifie que le tableau de proposition n'est pas vide.
      */
     modifier notEmptyProposals() {
-        require(proposals.length>0, "No proposals sended.");
+        require(proposals.length > 0, "No proposals sended.");
         _;
     }
 
@@ -78,7 +77,7 @@ contract Voting is Ownable {
      * @param _address l'adresse ethereum de l'électeur à ajouter
      */
     function registerVoter(address _address) external onlyOwner {
-        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !"); // TODO MODIFIER avec startProposalsRegistration ???????????
+        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !");
         require(!voters[_address].isRegistered, "Already registered.");
         voters[_address].isRegistered = true;
         emit VoterRegistered(_address);
@@ -88,17 +87,15 @@ contract Voting is Ownable {
      * @notice L'administrateur du vote commence la session d'enregistrement de la proposition.
      */
     function startProposalsRegistration() external onlyOwner {
-        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to start the registration of proposals !");  // TODO MODIFIER avec registerVoter ???????????
+        require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to start the registration of proposals !");
         workflowStatus = WorkflowStatus.ProposalsRegistrationStarted;
         emit WorkflowStatusChange(WorkflowStatus.RegisteringVoters, WorkflowStatus.ProposalsRegistrationStarted);
     }
 
-    // TODO : 1 seule méthode pour modifier le statut ? status++ ?
-
     /**
      * @notice L'administrateur de vote met fin à la session d'enregistrement des propositions.
      */
-    function stopProposalsRegistration() external onlyOwner { /////////// TODO SI 0 proposition ???????????????????
+    function stopProposalsRegistration() external onlyOwner {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Wrong step to stop the registration of proposals !");
         workflowStatus = WorkflowStatus.ProposalsRegistrationEnded;
         emit WorkflowStatusChange(WorkflowStatus.ProposalsRegistrationStarted, WorkflowStatus.ProposalsRegistrationEnded);
@@ -116,7 +113,7 @@ contract Voting is Ownable {
     /**
      * @notice L'administrateur du vote met fin à la session de vote.
      */
-    function stopVotingSession() external onlyOwner { /////////// TODO SI 0 vote ???????????????????
+    function stopVotingSession() external onlyOwner {
         require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Wrong step to stop voting !");
         workflowStatus = WorkflowStatus.VotingSessionEnded;
         emit WorkflowStatusChange(WorkflowStatus.VotingSessionStarted, WorkflowStatus.VotingSessionEnded);
@@ -148,9 +145,8 @@ contract Voting is Ownable {
      * @param _description la description de la proposition
      */
     function addProposal(string calldata _description) external onlyVoters {
-        // TODO : vérif proposition existante ??
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Proposals can't be sent now.");
-        require(bytes(_description).length>0, "Can't send empty proposal.");
+        require(bytes(_description).length > 0, "Can't send empty proposal.");
 
         Proposal memory proposal;
         proposal.description = _description;
@@ -184,8 +180,6 @@ contract Voting is Ownable {
         return voters[_address].votedProposalId;
     }
 
-    // ---------- Getters sur les proposals ----------
-
     /**
      * @notice Chaque électeur peut prendre connaissance d'une proposition.
      * @dev Le tableau de proposition ne doit pas être vide et l'id demandé doit exister.
@@ -195,6 +189,8 @@ contract Voting is Ownable {
     function getProposal(uint _proposalId) external view onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) returns (string memory) {
         return proposals[_proposalId].description;
     }
+
+    // ---------- Action pour tous ----------
 
     /**
      * @notice Tout le monde peut vérifier les derniers détails de la proposition gagnante.
