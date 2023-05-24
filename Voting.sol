@@ -79,6 +79,7 @@ contract Voting is Ownable {
     function registerVoter(address _address) external onlyOwner {
         require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !");
         require(!voters[_address].isRegistered, "Already registered.");
+        
         voters[_address].isRegistered = true;
         emit VoterRegistered(_address);
     }
@@ -142,6 +143,7 @@ contract Voting is Ownable {
 
     /**
      * @notice Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que la session d'enregistrement est active.
+     * @dev Seuls les électeurs peuvent ajouter une proposition.
      * @param _description la description de la proposition
      */
     function addProposal(string calldata _description) external onlyVoters {
@@ -156,10 +158,12 @@ contract Voting is Ownable {
 
     /**
      * @notice Les électeurs inscrits votent pour leur proposition préférée.
+     * @dev Seuls les électeurs peuvent voter, il doit y avoir des propositions, l'id proposé doit exister
      * @param _proposalId id de la proposition votée
      */
     function addVote(uint _proposalId) external onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) {
         require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Votes can't be sent now.");
+        require(!voters[msg.sender].hasVoted, "You can only vote once.");
 
         proposals[_proposalId].voteCount++;
         voters[msg.sender].hasVoted = true;
@@ -177,6 +181,7 @@ contract Voting is Ownable {
         require(voters[_address].isRegistered, "This address can't vote.");
         require(voters[_address].hasVoted, "This address didn't vote.");
         require(workflowStatus >= WorkflowStatus.VotingSessionStarted, "Voting session has not started.");
+
         return voters[_address].votedProposalId;
     }
 
