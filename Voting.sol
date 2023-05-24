@@ -63,7 +63,6 @@ contract Voting is Ownable {
 
     /**
      * @dev On vérifie que la proposition existe
-     * @param _proposalId id de la proposition
      */
     modifier shouldIdProposalExists(uint _proposalId) {
         require(_proposalId < proposals.length, "This proposal doesn't exist.");
@@ -73,8 +72,7 @@ contract Voting is Ownable {
     // ---------- Actions d'administration ----------
 
     /**
-     * @notice L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
-     * @param _address l'adresse ethereum de l'électeur à ajouter
+     * @dev L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
      */
     function registerVoter(address _address) external onlyOwner {
         require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to register a new voter !");
@@ -85,7 +83,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice L'administrateur du vote commence la session d'enregistrement de la proposition.
+     * @dev L'administrateur du vote commence la session d'enregistrement de la proposition.
      */
     function startProposalsRegistration() external onlyOwner {
         require(workflowStatus == WorkflowStatus.RegisteringVoters, "Wrong step to start the registration of proposals !");
@@ -94,7 +92,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice L'administrateur de vote met fin à la session d'enregistrement des propositions.
+     * @dev L'administrateur de vote met fin à la session d'enregistrement des propositions.
      */
     function stopProposalsRegistration() external onlyOwner {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Wrong step to stop the registration of proposals !");
@@ -103,7 +101,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice L'administrateur du vote commence la session de vote.
+     * @dev L'administrateur du vote commence la session de vote.
      */
     function startVotingSession() external onlyOwner {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationEnded, "Wrong step to start voting !");
@@ -112,7 +110,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice L'administrateur du vote met fin à la session de vote.
+     * @dev L'administrateur du vote met fin à la session de vote.
      */
     function stopVotingSession() external onlyOwner {
         require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Wrong step to stop voting !");
@@ -121,8 +119,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice L'administrateur du vote comptabilise les votes.
-     * @dev Il n'y a aucun sens à comptabiliser des votes si aucune proposition n'a été faite.
+     * @dev L'administrateur du vote comptabilise les votes.
      */
     function tallyVotes() external onlyOwner notEmptyProposals {
         require(workflowStatus == WorkflowStatus.VotingSessionEnded, "Wrong step to tally the votes !");
@@ -142,9 +139,7 @@ contract Voting is Ownable {
     // ---------- Actions des électeurs ----------
 
     /**
-     * @notice Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que la session d'enregistrement est active.
-     * @dev Seuls les électeurs peuvent ajouter une proposition.
-     * @param _description la description de la proposition
+     * @dev Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que la session d'enregistrement est active.
      */
     function addProposal(string calldata _description) external onlyVoters {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Proposals can't be sent now.");
@@ -157,9 +152,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice Les électeurs inscrits votent pour leur proposition préférée.
-     * @dev Seuls les électeurs peuvent voter, il doit y avoir des propositions, l'id proposé doit exister
-     * @param _proposalId id de la proposition votée
+     * @dev Les électeurs inscrits votent pour leur proposition préférée.
      */
     function addVote(uint _proposalId) external onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) {
         require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Votes can't be sent now.");
@@ -172,10 +165,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice Chaque électeur peut voir les votes des autres. 
-     * @dev L'adresse demandée doit être whitelistée, l'électeur doit avoir émis un vote et la session doit avoir été démarrée.
-     * @param _address l'adresse ethereum de l'électeur.
-     * @return proposalId l'id de la proposition votée par l'adresse.
+     * @dev Chaque électeur peut voir les votes des autres. 
      */
     function getVote(address _address) external view onlyVoters returns (uint) {
         require(voters[_address].isRegistered, "This address can't vote.");
@@ -186,10 +176,7 @@ contract Voting is Ownable {
     }
 
     /**
-     * @notice Chaque électeur peut prendre connaissance d'une proposition.
-     * @dev Le tableau de proposition ne doit pas être vide et l'id demandé doit exister.
-     * @param _proposalId identifiant de la proposition
-     * @return description la description de la proposition demandée
+     * @dev Chaque électeur peut prendre connaissance d'une proposition.
      */
     function getProposal(uint _proposalId) external view onlyVoters notEmptyProposals shouldIdProposalExists(_proposalId) returns (string memory) {
         return proposals[_proposalId].description;
@@ -198,9 +185,7 @@ contract Voting is Ownable {
     // ---------- Action pour tous ----------
 
     /**
-     * @notice Tout le monde peut vérifier les derniers détails de la proposition gagnante.
-     * @dev Le tableau de proposition ne doit pas être vide et le comptage des votes doit être clos.
-     * @return description la description de la proposition gagnante
+     * @dev Tout le monde peut vérifier les derniers détails de la proposition gagnante.
      */
     function getWinnerProposal() external view notEmptyProposals returns (string memory) {
         require(workflowStatus == WorkflowStatus.VotesTallied, "Please, wait the end of the tally.");
