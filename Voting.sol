@@ -3,13 +3,6 @@ pragma solidity 0.8.20;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 
-// TODO LIST !!
-// 1 - SC réutilisable OK
-// 2 - pas 2 proposals identiques OK
-// 3 - remettre params & return OK
-// 4 - 1 méthode pour gérer tous les changements de statut ??
-// 5 - Voir pour améliorer le push Proposal en 1 ligne !? OK
-
 /**
  * @title Projet 1 - formation Alyra - Contrat de vote pour une petite organisation.
  * @dev Gestion d'un système de vote dont les électeurs peuvent réaliser des propositions.
