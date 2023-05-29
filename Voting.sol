@@ -141,8 +141,16 @@ contract Voting is Ownable {
         emit WorkflowStatusChange(WorkflowStatus.VotingSessionEnded, WorkflowStatus.VotesTallied);
     }
 
+    /**
+     * @dev L'administrateur ré-initialise une nouvelle session de vote.
+     * La session peut être ré-initialisée dans 2 cas : 
+     *  - s'il y a eu des propositions, des votes et que l'état est à VotesTallied
+     *  - s'il n'y a pas eu de proposition et que l'état est au-moins à ProposalsRegistrationEnded
+     */
     function resetVoteSession() external onlyOwner {
-        require(workflowStatus == WorkflowStatus.VotesTallied, "Please, wait the end of the current voting session.");
+        require(workflowStatus == WorkflowStatus.VotesTallied // suffisant car on arrive à cet état seulement s'il y a eu des propositions
+                || (workflowStatus >= WorkflowStatus.ProposalsRegistrationEnded && proposals.length == 0) // permet de ne pas bloquer la session courante si 0 proposition
+            , "Please, wait the end of the current voting session.");
 
         workflowStatus = WorkflowStatus.RegisteringVoters;
         winningProposalId = 0;
@@ -166,9 +174,7 @@ contract Voting is Ownable {
         require(bytes(_description).length > 0, "Can't send empty proposal.");
 
         for (uint i=0; i < proposals.length; i++) {
-            if (keccak256(abi.encodePacked(proposals[i].description)) == keccak256(abi.encodePacked(_description))) {
-                revert("This proposal already exists.");
-            }
+            require(keccak256(abi.encodePacked(proposals[i].description)) != keccak256(abi.encodePacked(_description)), "This proposal already exists.");
         }
 
         proposals.push(Proposal(_description, 0));
